@@ -1,14 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8"> 
-    <title>WhatsApp Sticker Maker</title> 
+  <style>
+    body { width: 300px; }
+    #paste-area {
+      min-height: 150px;
+      border: 2px dashed #ccc;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #777;
+    }
+    #paste-area img {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
-<body style="font-family: Arial, Helvetica, sans-serif; background-color: #121212; color: white; border-radius: 22px;">
-    <h1 style="color: #25D366;" >WhatsApp Sticker Maker</h1>
-    <div id="paste-area" style="border: 1px solid #ccc; padding: 20px; height: 200px; width: 300px;">
-        Paste an image here...
-    </div>
-    <script src="popup.js"></script>
+<body>
+  <h4>Paste Image Here</h4>
+  <div id="paste-area">
+    Click here and press Ctrl+V
+  </div>
+  <script src="popup.js"></script>
 </body>
 </html>
