@@ -1,72 +1,76 @@
-// This function will be injected into the active page.
-// It finds and clicks all three elements in sequence.
-function performClickSequence() {
+/**
+ * This function is injected into the active page.
+ * It uses a fast "polling" method to run the sequence.
+ */
+async function performFullSequence(imageDataUrl) {
 
-    // --- Part 1: Click the first two icons ---
-    
-    const selectors = [
-        '[data-icon="expressions"]',
-        '[data-icon="wds-ic-sticker"]'
-    ];
+    // --- HELPER FUNCTIONS (to run on the page) ---
 
-    let clickIndex = 0;
+    // NEW Helper 1: Waits for an element to exist, then returns it.
+    // This is much faster than a fixed 500ms wait.
+    function waitForElement(selector, timeout = 3000) { // 3-second timeout
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
 
-    function clickNext() {
-        if (clickIndex >= selectors.length) {
-            // After clicking the first two, find and click the 'Create' button
-            clickCreateButton();
-            return;
-        }
-
-        const selector = selectors[clickIndex];
-        const elementToClick = document.querySelector(selector);
-
-        if (elementToClick) {
-            elementToClick.click();
-            clickIndex++;
-            // Wait 500ms for the UI to update
-            setTimeout(clickNext, 500);
-        } else {
-            alert(`Error: Could not find element with selector "${selector}"`);
-        }
-    }
-
-    // --- Part 2: Find and click the 'Create' button ---
-    
-    function clickCreateButton() {
-        let found = false;
-        // Get all divs on the page
-        const allDivs = document.querySelectorAll('div');
-        
-        // Loop through them to find the one that matches our structure
-        for (const div of allDivs) {
-            // Check if this div contains BOTH the plus icon AND the "Create" text span
-            const hasPlusIcon = div.querySelector('[data-icon="plus"]');
-            const spans = div.querySelectorAll('span');
-            
-            // Check if one of its child spans has the exact text "Create"
-            const hasCreateText = Array.from(spans).some(span => 
-                span.textContent === 'Create' && !span.hasAttribute('data-icon')
-            );
-
-            if (hasPlusIcon && hasCreateText) {
-                div.click();
-                found = true;
-                break; // We found it, stop searching
+            function check() {
+                const element = document.querySelector(selector);
+                if (element) {
+                    resolve(element);
+                } else if (Date.now() - startTime > timeout) {
+                    reject(new Error(`Element "${selector}" not found after ${timeout}ms`));
+                } else {
+                    // Check again very soon
+                    setTimeout(check, 50); 
+                }
             }
-        }
-
-        if (!found) {
-            alert('Error: Could not find the "Create" button.');
-        }
+            check();
+        });
     }
 
-    // Start the whole sequence
-    clickNext();
+    // Helper 2: Converts a Data URL (Base64) back into a File object
+    async function dataUrlToFile(dataUrl, fileName) {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      return new File([blob], fileName, { type: blob.type });
+    }
+
+    // --- MAIN ACTION SEQUENCE (NOW FASTER) ---
+    try {
+        // 1. Wait for & Click "expressions"
+        const expressionsIcon = await waitForElement('[data-icon="expressions"]');
+        expressionsIcon.click();
+
+        // 2. Wait for & Click "sticker" (runs as soon as it appears)
+        const stickerIcon = await waitForElement('[data-icon="wds-ic-sticker"]');
+        stickerIcon.click();
+        
+        // 3. Wait for the file input (runs as soon as it appears)
+        const fileInput = await waitForElement('input[type="file"]');
+
+        // 4. "Upload" the image (This part is already fast)
+        const file = await dataUrlToFile(imageDataUrl, 'pasted-image.png');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+
+        fileInput.files = dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        
+    } catch (error) {
+        alert(`Extension Error: ${error.message}`);
+    }
 }
 
+// --- POPUP SCRIPT (Handles pasting) ---
+// (This part is unchanged)
 
-// --- This part below remains unchanged ---
+function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(blob);
+    });
+}
 
 const pasteArea = document.getElementById('paste-area');
     
@@ -75,10 +79,10 @@ pasteArea.addEventListener('paste', (e) => {
     const items = e.clipboardData.items;
 
     for (const item of items) {
-        const blob = item.getAsFile();
+        const blob = item.getAsFile(); 
 
         if (blob && blob.type.startsWith('image/')) {
-            pasteArea.innerHTML = ''; // Clear the "paste here" text
+            pasteArea.innerHTML = '';
             
             const url = URL.createObjectURL(blob);
             let img = new Image();
@@ -88,38 +92,36 @@ pasteArea.addEventListener('paste', (e) => {
                 pasteArea.appendChild(img);  
                 
                 const newButton = document.createElement('button');
-                newButton.textContent = "Start Click Sequence"; 
+                newButton.textContent = "Run Full Sequence"; 
                 pasteArea.appendChild(newButton);
 
-                // --- START: CLICK LOGIC ---
-
                 newButton.addEventListener('click', async () => {
-                    newButton.textContent = "Clicking...";
+                    newButton.textContent = "Running...";
                     newButton.disabled = true;
 
                     try {
+                        const imageDataUrl = await blobToDataURL(blob);
                         const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
                         
                         if (!activeTab || !activeTab.id) {
                             throw new Error("Could not find an active tab.");
                         }
 
-                        // Inject the sequence function
                         await chrome.scripting.executeScript({
                             target: { tabId: activeTab.id },
-                            func: performClickSequence
+                            func: performFullSequence,
+                            args: [imageDataUrl]
                         });
                         
                         newButton.textContent = "Sequence Done!";
 
                     } catch (error) {
-                        console.error("Click failed:", error);
-                        alert(`Click Error: ${error.message}`);
-                        newButton.textContent = "Start Click Sequence"; // Reset button
+                        console.error("Action failed:", error);
+                        alert(`Action Error: ${error.message}`);
+                        newButton.textContent = "Run Full Sequence";
                         newButton.disabled = false;
                     }
                 });
-                // --- END: CLICK LOGIC ---
             };
 
             img.src = url;
