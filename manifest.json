@@ -1,6 +1,6 @@
 {
     "name" : "WhatsApp Sticker",
-    "description": "Base Level Extension",
+    "description": "Convert Your Images To Stickers Easily",
     "version" : "0.0.1",
     "manifest_version": 3,
     "action" : {
