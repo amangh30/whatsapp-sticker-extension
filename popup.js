@@ -37,7 +37,7 @@ async function performFullSequence(imageDataUrl) {
     // --- MAIN ACTION SEQUENCE (NOW FASTER) ---
     try {
         // 1. Wait for & Click "expressions"
-        const expressionsIcon = await waitForElement('[data-icon="expressions"]');
+        const expressionsIcon = await waitForElement('button[aria-label*="Emojis"]');
         expressionsIcon.click();
 
         // 2. Wait for & Click "sticker" (runs as soon as it appears)
