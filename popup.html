@@ -3,55 +3,226 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Sticker Maker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #090d16 0%, #111827 100%);
+      --accent-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --accent-glow: rgba(16, 185, 129, 0.4);
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(16, 185, 129, 0.5);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     body { 
-      width: 300px; 
+      width: 320px; 
       margin: 0;
-      padding: 12px;
-      background-color: #121212;
-      border-radius: 22px;
-      font-family: Arial, sans-serif;
+      padding: 16px;
+      background: var(--bg-gradient);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     h2 {
-      color: #25D366;
+      font-size: 1.25rem;
+      font-weight: 700;
       text-align: center;
-      margin-top: 0;
+      margin: 4px 0 8px 0;
+      background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
     }
 
+    /* Interactive Drop Zone */
     #paste-area {
-      min-height: 150px;
-      border: 2px dashed #ccc;
-      padding: 10px;
+      min-height: 160px;
+      border: 2px dashed var(--card-border);
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      padding: 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      color: #777;
-      border-radius: 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      position: relative;
+      outline: none;
     }
 
-    #paste-area:hover {
-      border-color: #25D366;
-      color: #25D366;
+    #paste-area:hover, #paste-area:focus {
+      border-color: var(--card-border-hover);
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    #paste-area.highlight {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+      transform: scale(0.98);
+    }
+
+    /* Icon in Drop Zone */
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      fill: #10b981;
+      opacity: 0.85;
+      filter: drop-shadow(0 2px 8px var(--accent-glow));
+    }
+
+    #paste-area:hover .upload-icon {
+      transform: translateY(-2px);
+      opacity: 1;
+    }
+
+    .upload-text {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-main);
+      margin: 0 0 4px 0;
+    }
+
+    .upload-subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin: 0 0 12px 0;
+    }
+
+    /* Custom Button Inside Drop Zone */
+    .btn-browse {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 8px;
       cursor: pointer;
     }
 
-    #paste-area img {
+    .btn-browse:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Preview Section */
+    #preview-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      position: relative;
+    }
+
+    .preview-media {
       max-width: 100%;
-      height: auto;
-      margin-bottom: 10px;
+      max-height: 180px;
+      border-radius: 10px;
+      object-fit: contain;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .file-details {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+      word-break: break-all;
+      width: 100%;
+    }
+
+    /* Send Action Button */
+    #send-btn {
+      width: 100%;
+      background: var(--accent-gradient);
+      border: none;
+      color: #fff;
+      padding: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    #send-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+      filter: brightness(1.1);
+    }
+
+    #send-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    #send-btn:disabled {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.2);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 
 <body>
-  <h2>WhatsApp Sticker Maker</h2>
+  <div class="container">
+    <h2>WhatsApp Sticker Maker</h2>
 
-  <div id="paste-area" tabindex="0">
-    Click here and press Ctrl+V
+    <!-- Drop/Paste Area -->
+    <div id="paste-area" tabindex="0">
+      <svg class="upload-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+      </svg>
+      <div class="upload-text">Paste, Drop, or Select file</div>
+      <div class="upload-subtext">Supports PNG, JPG, GIF, WEBP</div>
+      <button class="btn-browse" id="browse-btn">Choose File</button>
+      <input type="file" id="file-input" accept="image/*,video/mp4,video/quicktime,video/webm" class="hidden">
+    </div>
+
+    <!-- Preview Box -->
+    <div id="preview-container">
+      <div id="media-wrapper" style="width: 100%; display: flex; justify-content: center;">
+        <!-- Dynamically populated with img or video -->
+      </div>
+      <div class="file-details" id="file-details"></div>
+    </div>
+
+    <!-- Submit Button -->
+    <button id="send-btn" disabled>
+      <span>Send to WhatsApp</span>
+    </button>
   </div>
 
   <script src="popup.js"></script>
